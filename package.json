@@ -1,6 +1,6 @@
 {
   "name": "serverkit-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Stdio MCP server that discovers a ServerKit phone on the LAN and proxies its SSH command tools to any MCP-capable agent.",
   "type": "module",
   "bin": {
