@@ -18,12 +18,37 @@ class RemoteConnection {
     if (this.#client) {
       await this.disconnect();
     }
+    try {
+      await this.#connectOnce(url);
+    } catch (err) {
+      // mcp_dart's StreamableHTTPServerTransport only supports ONE
+      // `initialize` per instance for its whole lifetime - if a previous
+      // client vanished without a graceful disconnect (closed terminal,
+      // killed process), the phone is stuck refusing every reconnect with
+      // "Server already initialized", forever, even from a brand-new
+      // client. /mcp/reset (outside the MCP/JSON-RPC layer, so it's
+      // reachable even while /mcp itself is stuck) tears down and rebuilds
+      // that transport. Try it once, transparently, before giving up.
+      await this.#resetServer(url);
+      await this.#connectOnce(url);
+    }
+  }
+
+  async #connectOnce(url) {
     const transport = new StreamableHTTPClientTransport(new URL(url));
     const client = new Client({ name: 'serverkit-mcp', version: '0.1.0' });
     await client.connect(transport);
     this.#client = client;
     this.#transport = transport;
     this.#url = url;
+  }
+
+  async #resetServer(url) {
+    const resetUrl = url.replace(/\/mcp\/?$/, '/mcp/reset');
+    const res = await fetch(resetUrl, { method: 'POST' });
+    if (!res.ok) {
+      throw new Error(`Server reset failed: HTTP ${res.status}`);
+    }
   }
 
   async disconnect() {
