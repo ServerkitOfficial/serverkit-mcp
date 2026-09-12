@@ -1,0 +1,22 @@
+{
+  "name": "serverkit-mcp",
+  "version": "0.1.0",
+  "description": "Stdio MCP server that discovers a ServerKit phone on the LAN and proxies its SSH command tools to any MCP-capable agent.",
+  "type": "module",
+  "bin": {
+    "serverkit-mcp": "./src/index.js"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "zod": "^4.0.0"
+  }
+}
