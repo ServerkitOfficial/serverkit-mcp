@@ -9,6 +9,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: prod # must match the Environment name set on npm's Trusted Publisher config
     permissions:
       contents: read
       id-token: write # required for OIDC trusted publishing - no NPM_TOKEN needed
