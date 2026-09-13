@@ -36,13 +36,21 @@ function subnetBroadcastAddresses() {
 /**
  * Broadcasts a discovery request and collects responses for `timeoutMs`.
  * Returns a de-duplicated (by url) list of { name, url }.
+ *
+ * UDP broadcast has no delivery guarantee - a single lost packet (common
+ * right after Wi-Fi association, or just ordinary broadcast drop) means no
+ * reply ever arrives even though the phone was listening the whole time. So
+ * this resends the request every `retryIntervalMs` for the whole window
+ * instead of firing once and hoping, and stops early once something answers.
  */
-export function discoverServers({ timeoutMs = 2000 } = {}) {
+export function discoverServers({ timeoutMs = 2500, retryIntervalMs = 400 } = {}) {
   return new Promise((resolve) => {
     const found = new Map(); // url -> name
     const socket = dgram.createSocket('udp4');
+    let retryTimer;
 
     const finish = () => {
+      clearInterval(retryTimer);
       try {
         socket.close();
       } catch {
@@ -64,15 +72,24 @@ export function discoverServers({ timeoutMs = 2000 } = {}) {
         return;
       }
       found.set(parsed.url, parsed.name ?? 'ServerKit');
+      // Got at least one reply - give other phones a brief moment to answer
+      // too, then stop instead of waiting out the full timeout.
+      clearInterval(retryTimer);
+      setTimeout(finish, 300);
     });
 
-    socket.bind(() => {
+    const broadcast = () => {
       socket.setBroadcast(true);
       const payload = Buffer.from(JSON.stringify(REQUEST), 'utf8');
       const targets = new Set([...subnetBroadcastAddresses(), '255.255.255.255']);
       for (const addr of targets) {
         socket.send(payload, DISCOVERY_PORT, addr);
       }
+    };
+
+    socket.bind(() => {
+      broadcast();
+      retryTimer = setInterval(broadcast, retryIntervalMs);
     });
 
     setTimeout(finish, timeoutMs);
