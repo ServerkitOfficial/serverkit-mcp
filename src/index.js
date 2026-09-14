@@ -135,6 +135,65 @@ server.registerTool(
   async () => remote.callTool('cancel_command', {}),
 );
 
+// Management-mode tools: let the agent bootstrap a fresh ServerKit install
+// (add a server, then connect to it) without the phone owner touching the
+// Servers tab first. Also 1:1 forwards - require start_session first, same
+// as run_command.
+
+server.registerTool(
+  'list_servers',
+  {
+    description:
+      'List every server the connected ServerKit phone knows about. Use this before ' +
+      'connect_server to find the id of the one you want, or before add_server to check ' +
+      'one doesn\'t already exist. Requires start_session first. Never returns credentials.',
+    inputSchema: z.object({}),
+  },
+  async () => remote.callTool('list_servers', {}),
+);
+
+server.registerTool(
+  'add_server',
+  {
+    description:
+      'Save a new server on the connected ServerKit phone so it can be connected to (via ' +
+      'connect_server) and shown in the app\'s Servers tab. Provide either password or ' +
+      'private_key, not both. Requires start_session first. This only saves the server - ' +
+      'call connect_server afterward to actually reach it.',
+    inputSchema: z.object({
+      name: z.string().describe('Display name for the server'),
+      host: z.string().describe('Hostname or IP address'),
+      port: z.number().describe('SSH port, usually 22'),
+      username: z.string().describe('SSH username'),
+      os: z.string().describe('Always "ubuntu" - the only supported OS'),
+      version: z.string().describe('Ubuntu major version: "20", "22", or "24"'),
+      password: z.string().optional().describe('SSH password, if not using a private key'),
+      private_key: z.string().optional().describe('PEM private key, if not using a password'),
+      key_passphrase: z.string().optional().describe('Passphrase for private_key, if it has one'),
+    }),
+  },
+  async (args) => remote.callTool('add_server', args),
+);
+
+server.registerTool(
+  'connect_server',
+  {
+    description:
+      'Connect the ServerKit phone to a saved server by id (from list_servers). The phone ' +
+      'only holds one active connection at a time, so this replaces whatever was connected ' +
+      'before. Requires start_session first. If this fails, the MCP session may have been ' +
+      'stopped - ask the user to restart it from the app.',
+    inputSchema: z.object({
+      server_id: z.string().describe('Server id from list_servers'),
+      password: z
+        .string()
+        .optional()
+        .describe('SSH password, only if the saved server needs one not already stored'),
+    }),
+  },
+  async (args) => remote.callTool('connect_server', args),
+);
+
 // These two are NOT 1:1 forwards like the tools above - only this Node
 // process has real desktop filesystem access, so the actual byte-moving
 // happens here (fileTransfer.js), against the phone's raw /file route, not

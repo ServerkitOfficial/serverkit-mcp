@@ -34,6 +34,12 @@ at it with the tools below.
   tools. See `ssh_server_manager/lib/features/mcp_server/data/mcp_tools.dart` in the main
   app repo for what these actually do server-side; keep this file's tool list in sync with
   that one.
+- `list_servers()`, `add_server(name, host, port, username, os, version, password?,
+  private_key?, key_passphrase?)`, `connect_server(server_id, password?)` - "management
+  mode": bootstrap a fresh ServerKit install (save a server, then connect to it) without
+  the phone owner touching the Servers tab first. Also 1:1 forwards, also require
+  `start_session` first. See
+  `ssh_server_manager/lib/features/mcp_server/data/mcp_management_tools.dart`.
 - `download_file(remote_path, local_path)`, `upload_file(local_path, remote_path)` -
   desktop-side only, not forwarded to the phone. Only this Node process has real desktop
   filesystem access, so the actual byte-moving happens here, against the phone's raw
